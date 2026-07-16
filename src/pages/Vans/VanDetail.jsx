@@ -1,29 +1,44 @@
-import React, { useState, useEffect } from 'react'
-import { data, useParams } from 'react-router-dom'
+import { Suspense } from 'react'
+import { Link, useLocation, useLoaderData, defer, Await } from 'react-router-dom'
+import { getVans } from '../../api.js'
+
+export function loader({ params }) {
+    return defer({ van: getVans(params.id) })
+}
 
 export default function VanDetail() {
-    const [van, setVan] = useState({})
-    const params = useParams()
-    useEffect(() => {
-        fetch(`/api/vans/${params.id}`)
-            .then(res => res.json())
-            .then(data => setVan(data.van))
-    }, [params.id])
+    const location = useLocation()
+    const dataPromise = useLoaderData()
+
+    const type = location.state?.type || "all"
+
+    function renderVan(van) {
+        return (
+            <div className="van-detail">
+                <img alt={van.name} src={van.imageUrl} />
+                <i className={`van-type ${van.type}  `}>
+                    {van.type}
+                </i>
+                <h2>{van.name}</h2>
+                <p className="van-price"><span>${van.price}</span>/day</p>
+                <p>{van.description}</p>
+                <button className="link-button">Rent this van</button>
+            </div>
+        )
+    }
 
     return (
         <div className="van-detail-container">
-            {van ? (
-                <div className="van-detail">
-                    <img alt={van.name} src={van.imageUrl} />
-                    <i className={`van-type ${van.type}  `}>
-                        {van.type}
-                    </i>
-                    <h2>{van.name}</h2>
-                    <p className="van-price"><span>${van.price}</span>/day</p>
-                    <p>{van.description}</p>
-                    <button className="link-button">Rent this van</button>
-                </div>
-            ) : <h2>Loading...</h2>}   
+            <Link
+                to={`..${location.state.search ? `?${location.state.search}` : ""}`}
+                relative="path"
+                className="back-button"
+            >&larr; <span>Back to {type} vans</span></Link>
+            <Suspense fallback={<h2>Loading ...</h2>}>
+                <Await resolve={dataPromise.van}>
+                    {renderVan}
+                </Await>
+            </Suspense>
         </div>
     )
 }
